@@ -1,0 +1,4 @@
+trained_models/
+results/
+data/
+**__pycache__**
