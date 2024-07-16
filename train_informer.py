@@ -66,6 +66,11 @@ class Exp():
         else:
             shuffle_flag = False
 
+        if flag == "test":
+            drop_last = True
+        else:
+            drop_last = False
+
         data_set = HumanBehaviorDatasetInformer(
             root_path=self.args.root_path,
             flag=flag,
@@ -77,6 +82,7 @@ class Exp():
             batch_size=self.args.batch_size,
             shuffle=shuffle_flag,
             num_workers=self.args.num_workers,
+            drop_last=drop_last,
         )
 
         return data_set, data_loader
@@ -153,6 +159,9 @@ class Exp():
                 pred, true = self._process_one_batch(
                     train_data, batch_x, batch_y
                 )
+                # print("pred vs true")
+                # print(pred[0, : 3, :3])
+                # print(true[0, : 3, :3])
 
                 loss = criterion(pred, true)
                 train_loss.append(loss.item())

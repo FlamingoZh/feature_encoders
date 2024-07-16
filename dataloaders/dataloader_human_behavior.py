@@ -59,8 +59,8 @@ class HumanBehaviorDatasetInformer(Dataset):
             all_data.append(data_clips)
             all_meta_info.append(meta_info)
 
-        data_video_clips = np.concatenate(all_data, axis=0)[:2000]
-        clip_meta_info = np.concatenate(all_meta_info, axis=0)[:2000]
+        data_video_clips = np.concatenate(all_data, axis=0)[:100]
+        clip_meta_info = np.concatenate(all_meta_info, axis=0)[:100]
 
         data_video_clips = zscore(data_video_clips, axis=0)
 
