@@ -88,7 +88,7 @@ class Exp():
         return data_set, data_loader
 
     def _select_optimizer(self):
-        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate, amsgrad=True)
         return model_optim
 
     def _select_criterion(self):
@@ -103,27 +103,25 @@ class Exp():
 
         # decoder input
         if self.args.padding == 0:
-            dec_inp = torch.zeros(
+            decoder_input = torch.zeros(
                 [batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]
             ).float()
         elif self.args.padding == 1:
-            dec_inp = torch.ones(
+            decoder_input = torch.ones(
                 [batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]
             ).float()
-        dec_inp = (
-            torch.cat([batch_y[:, : self.args.label_len, :], dec_inp], dim=1)
+        decoder_input = (
+            torch.cat([batch_y[:, : self.args.label_len, :], decoder_input], dim=1)
             .float()
             .to(self.device)
         )
-        # print("dec_inp:", dec_inp.shape, dec_inp[0][1][1], dec_inp[0][11][1])
 
         if self.args.output_attention:
-            outputs = self.model(batch_x, dec_inp)[0]
+            outputs = self.model(batch_x, decoder_input)[0]
         else:
-            outputs = self.model(batch_x, dec_inp)
+            outputs = self.model(batch_x, decoder_input)
 
         true = batch_y[:, -self.args.pred_len:, :].to(self.device)
-
         return outputs, true
 
     def train(self, setting):
@@ -148,20 +146,13 @@ class Exp():
 
             self.model.train()
             epoch_time = time.time()
-            for i, (batch_x, batch_y) in enumerate(
-                train_loader
-            ):
+            for i, (batch_x, batch_y) in enumerate(train_loader):
                 iter_count += 1
-                # print(batch_x.shape, batch_y.shape)
-                # print(batch_x[0][1][1], batch_y[0][1][1], batch_y[0][11][1])
 
                 model_optim.zero_grad()
                 pred, true = self._process_one_batch(
                     train_data, batch_x, batch_y
                 )
-                # print("pred vs true")
-                # print(pred[0, : 3, :3])
-                # print(true[0, : 3, :3])
 
                 loss = criterion(pred, true)
                 train_loss.append(loss.item())
@@ -187,7 +178,7 @@ class Exp():
                 loss.backward()
                 model_optim.step()
 
-            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
+            # print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
             train_post_loss = self.vali(train_data, train_loader, criterion)  # train loss evaluated after training
             vali_loss = self.vali(vali_data, vali_loader, criterion)
@@ -202,7 +193,7 @@ class Exp():
             #     print("Early stopping")
             #     break
 
-            adjust_learning_rate(model_optim, epoch + 1, self.args)
+            # adjust_learning_rate(model_optim, epoch + 1, self.args)
 
         best_model_path = path + "/" + "checkpoint.pth"
         self.model.load_state_dict(torch.load(best_model_path))
@@ -315,7 +306,7 @@ def main():
     parser.add_argument(
         "--output_attention",
         action="store_true",
-        help="whether to output attention in ecoder",
+        help="whether to output attention in encoder",
     )
     parser.add_argument(
         "--mix",
@@ -329,7 +320,7 @@ def main():
     )
     parser.add_argument("--train_epochs", type=int, default=20, help="train epochs")
     parser.add_argument(
-        "--batch_size", type=int, default=32, help="batch size of train input data"
+        "--batch_size", type=int, default=1024, help="batch size of train input data"
     )
     parser.add_argument("--patience", type=int, default=3, help="early stopping patience")
     parser.add_argument(
@@ -372,8 +363,8 @@ def main():
     print("----------------Start Training: {}----------------".format(setting))
     exp.train(setting)
 
-    print("----------------Testing: {}----------------".format(setting))
-    exp.test(setting)
+    # print("----------------Testing: {}----------------".format(setting))
+    # exp.test(setting)
 
 
 if __name__ == "__main__":

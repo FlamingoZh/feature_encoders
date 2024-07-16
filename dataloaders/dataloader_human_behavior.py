@@ -43,7 +43,7 @@ class HumanBehaviorDatasetInformer(Dataset):
 
     def load_data(self, root_path, flag):
         if flag == "train":
-            partitions = range(2, 3)
+            partitions = range(2, 20)
         elif flag == "test":
             partitions = range(0, 1)
         else:
@@ -59,8 +59,8 @@ class HumanBehaviorDatasetInformer(Dataset):
             all_data.append(data_clips)
             all_meta_info.append(meta_info)
 
-        data_video_clips = np.concatenate(all_data, axis=0)[:100]
-        clip_meta_info = np.concatenate(all_meta_info, axis=0)[:100]
+        data_video_clips = np.concatenate(all_data, axis=0)
+        clip_meta_info = np.concatenate(all_meta_info, axis=0)
 
         data_video_clips = zscore(data_video_clips, axis=0)
 
