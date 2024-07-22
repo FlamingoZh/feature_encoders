@@ -72,7 +72,7 @@ class Exp():
             drop_last = False
 
         data_set = HumanBehaviorDatasetInformer(
-            root_path=self.args.root_path,
+            args=self.args,
             flag=flag,
             )
         print(flag, len(data_set))
@@ -178,7 +178,7 @@ class Exp():
                 loss.backward()
                 model_optim.step()
 
-            # print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
+            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
             train_post_loss = self.vali(train_data, train_loader, criterion)  # train loss evaluated after training
             vali_loss = self.vali(vali_data, vali_loader, criterion)
@@ -189,14 +189,14 @@ class Exp():
                 )
             )
             early_stopping(vali_loss, self.model, path)
-            # if early_stopping.early_stop:
-            #     print("Early stopping")
-            #     break
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
 
-            # adjust_learning_rate(model_optim, epoch + 1, self.args)
+            adjust_learning_rate(model_optim, epoch + 1, self.args)
 
         best_model_path = path + "/" + "checkpoint.pth"
-        self.model.load_state_dict(torch.load(best_model_path))
+        self.model.load_state_dict(torch.load(best_model_path, map_location=self.device))
 
         return self.model
 
@@ -267,13 +267,13 @@ def main():
     )
 
     parser.add_argument(
-        "--seq_len", type=int, default=10, help="input sequence length of Informer encoder"
+        "--seq_len", type=int, default=50, help="input sequence length of Informer encoder"
     )
     parser.add_argument(
-        "--label_len", type=int, default=10, help="start token length of Informer decoder"
+        "--label_len", type=int, default=50, help="start token length of Informer decoder"
     )
     parser.add_argument(
-        "--pred_len", type=int, default=10, help="prediction sequence length"
+        "--pred_len", type=int, default=50, help="prediction sequence length"
     )
     # Informer decoder input: concat[start token series(label_len), zero padding series(pred_len)]
 
@@ -282,8 +282,8 @@ def main():
     parser.add_argument("--c_out", type=int, default=140, help="output size")
     parser.add_argument("--d_model", type=int, default=512, help="dimension of model")
     parser.add_argument("--n_heads", type=int, default=8, help="num of heads")
-    parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers")
-    parser.add_argument("--d_layers", type=int, default=3, help="num of decoder layers")
+    parser.add_argument("--e_layers", type=int, default=4, help="num of encoder layers")
+    parser.add_argument("--d_layers", type=int, default=4, help="num of decoder layers")
 
     parser.add_argument("--d_ff", type=int, default=2048, help="dimension of fcn")
     parser.add_argument("--factor", type=int, default=5, help="probsparse attn factor")
@@ -320,7 +320,7 @@ def main():
     )
     parser.add_argument("--train_epochs", type=int, default=20, help="train epochs")
     parser.add_argument(
-        "--batch_size", type=int, default=1024, help="batch size of train input data"
+        "--batch_size", type=int, default=256, help="batch size of train input data"
     )
     parser.add_argument("--patience", type=int, default=3, help="early stopping patience")
     parser.add_argument(
@@ -363,8 +363,8 @@ def main():
     print("----------------Start Training: {}----------------".format(setting))
     exp.train(setting)
 
-    # print("----------------Testing: {}----------------".format(setting))
-    # exp.test(setting)
+    print("----------------Testing: {}----------------".format(setting))
+    exp.test(setting)
 
 
 if __name__ == "__main__":

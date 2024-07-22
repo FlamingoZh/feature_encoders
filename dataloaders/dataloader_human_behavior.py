@@ -37,13 +37,19 @@ class HumanBehaviorDataset(Dataset):
 
 
 class HumanBehaviorDatasetInformer(Dataset):
-    def __init__(self, root_path, flag):
-        self.data_video_clips, self.clip_meta_info = self.load_data(root_path, flag)
+    def __init__(self, args, flag, do_zscore=True):
+        
+        self.args = args
+        self.do_zscore = do_zscore
+        self.mean = None
+        self.std = None
+
+        self.data_video_clips, self.clip_meta_info = self.load_data(self.args.root_path, flag)
         self.data_pairs = self.get_pairs(self.data_video_clips, self.clip_meta_info)
 
     def load_data(self, root_path, flag):
         if flag == "train":
-            partitions = range(2, 20)
+            partitions = range(2, 12)
         elif flag == "test":
             partitions = range(0, 1)
         else:
@@ -62,10 +68,14 @@ class HumanBehaviorDatasetInformer(Dataset):
         data_video_clips = np.concatenate(all_data, axis=0)
         clip_meta_info = np.concatenate(all_meta_info, axis=0)
 
-        data_video_clips = zscore(data_video_clips, axis=0)
-
-        data_video_clips = np.reshape(data_video_clips, (data_video_clips.shape[0], 140, 10))  # (sample_idx, feature_idx, time_idx)
+        data_video_clips = np.reshape(data_video_clips, (data_video_clips.shape[0], 140, self.args.seq_len))  # (sample_idx, feature_idx, time_idx)
         data_video_clips = np.transpose(data_video_clips, (0, 2, 1))
+
+        if self.do_zscore:
+            self.mean = data_video_clips.mean(axis=0)
+            self.std = data_video_clips.std(axis=0)
+            data_video_clips = zscore(data_video_clips, axis=0)
+
         print("Data shape:", data_video_clips.shape)
         print("Meta info shape:", clip_meta_info.shape)
 
@@ -77,8 +87,10 @@ class HumanBehaviorDatasetInformer(Dataset):
         while idx < len(data) - 1:
             # if two clips are from the same video
             if meta_info[idx][0] == meta_info[idx + 1][0]:
-                concated = np.concatenate([data[idx], data[idx + 1]], axis=0)
-                # concated = np.concatenate([data[idx], data[idx]], axis=0)
+                concated = np.concatenate(
+                    [data[idx], data[idx + 1, :self.args.pred_len]],
+                    axis=0
+                )
                 pairs.append((data[idx], concated))
             idx += 1
         return pairs
