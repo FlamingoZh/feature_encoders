@@ -45,7 +45,7 @@ class HumanBehaviorDatasetInformer(Dataset):
         self.std = None
 
         self.data_video_clips, self.clip_meta_info = self.load_data(self.args.root_path, flag)
-        self.data_pairs = self.get_pairs(self.data_video_clips, self.clip_meta_info)
+        self.data_pairs, self.pairs_meta_info = self.get_pairs(self.data_video_clips, self.clip_meta_info)
 
     def load_data(self, root_path, flag):
         if flag == "train":
@@ -83,6 +83,7 @@ class HumanBehaviorDatasetInformer(Dataset):
 
     def get_pairs(self, data, meta_info):
         pairs = []
+        pairs_meta_info = []
         idx = 0
         while idx < len(data) - 1:
             # if two clips are from the same video
@@ -92,8 +93,9 @@ class HumanBehaviorDatasetInformer(Dataset):
                     axis=0
                 )
                 pairs.append((data[idx], concated))
+                pairs_meta_info.append((meta_info[idx], meta_info[idx + 1]))
             idx += 1
-        return pairs
+        return pairs, pairs_meta_info
 
     def __getitem__(self, index):
         clip_x, clip_y = self.data_pairs[index]
