@@ -23,13 +23,22 @@ def main():
     parser.add_argument("--des", type=str, default="prediction_100ms")
     parser.add_argument("--device", type=str, default="cuda:4")
     parser.add_argument("--split", type=str, default="train")
+    parser.add_argument("--target_length", type=int, default=100)
 
     args = parser.parse_args()
 
-    features = np.load(f"/home/zhouyuchen/dumped_MELD/data_{args.split}.npy")
-    meta_info = np.load(f"/home/zhouyuchen/dumped_MELD/meta_info_{args.split}.npy")
+    features = pickle.load(open(f"/home/zhouyuchen/dumped_MELD/data_all_{args.split}.pkl", "rb"))
 
-    features = features.swapaxes(1, 2)
+    new_features = []
+    for row in features:
+        row = row.swapaxes(0, 1)
+        trim_row = row[:args.target_length]
+        pad_len = args.target_length - len(trim_row)
+        pad_row = np.pad(trim_row, ((0, pad_len), (0, 0)), "constant", constant_values=0)
+        new_features.append(pad_row)
+
+    features = new_features
+
     features = zscore(features, axis=0)
 
     model = Informer(
@@ -62,7 +71,7 @@ def main():
     model.eval()
     model.to(args.device);
 
-    batch_size = 1
+    batch_size = 256
 
     latent_representation = []
     model.eval()
@@ -83,7 +92,7 @@ def main():
 
     pickle.dump(
         latent_representation, 
-        open(f"/home/zhouyuchen/dumped_MELD/latent_representation_{args.split}.pkl", "wb")
+        open(f"/home/zhouyuchen/dumped_MELD/latent_representation_all_{args.split}.pkl", "wb")
     )
 
 

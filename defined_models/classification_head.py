@@ -7,11 +7,12 @@ class MLP_head(torch.nn.Module):
 
         self.model = torch.nn.Sequential(
             torch.nn.Linear(input_size, hidden_size),
-            nn.Dropout(0.8),
+            nn.Dropout(0.5),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_size, hidden_size),
-            # torch.nn.ReLU(),
-            # torch.nn.Linear(hidden_size, output_size)
+            nn.Dropout(0.5),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_size, output_size)
         )
 
     def forward(self, x):

@@ -9,7 +9,8 @@ class MELDLatentRepresentation(Dataset):
         latent_representation, meta_info = self.load_data(data_path, split)
 
         self.emotion, self.sentiment, self.idx_to_emotion, self.idx_to_sentiment, self.emotion_to_idx, self.sentiment_to_idx = self.unpack_meta_info(meta_info)
-
+        print(self.idx_to_emotion)
+        sss
         self.latent_representation = latent_representation
         if task == "emotion":
             self.label = self.emotion
@@ -21,8 +22,8 @@ class MELDLatentRepresentation(Dataset):
         assert len(self.latent_representation) == len(self.label)
 
     def load_data(self, root_path, split):
-        latent_representation_file_name = os.path.join(root_path, f"latent_representation_{split}.pkl")
-        meta_info_file_name = os.path.join(root_path, f"meta_info_{split}.npy")
+        latent_representation_file_name = os.path.join(root_path, f"latent_representation_all_{split}.pkl")
+        meta_info_file_name = os.path.join(root_path, f"meta_info_all_{split}.pkl")
 
         latent_representation = np.load(latent_representation_file_name, allow_pickle=True)
         meta_info = np.load(meta_info_file_name, allow_pickle=True)
@@ -30,8 +31,8 @@ class MELDLatentRepresentation(Dataset):
         return latent_representation, meta_info
 
     def unpack_meta_info(self, meta_info):
-        emotion = meta_info[:, 2]
-        sentiment = meta_info[:, 3]
+        emotion = [info[2] for info in meta_info]
+        sentiment = [info[3] for info in meta_info]
 
         emotion_to_idx = {}
         idx_to_emotion = {}

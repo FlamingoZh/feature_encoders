@@ -1,5 +1,7 @@
 import argparse
 import numpy as np
+from collections import Counter
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,7 +30,7 @@ def data_loaders(train_data, val_data, batch_size):
                               shuffle=True,
                               pin_memory=True)
     val_loader = DataLoader(val_data,
-                            batch_size=batch_size,
+                            batch_size=1,
                             shuffle=True,
                             pin_memory=True)
     return train_loader, val_loader
@@ -79,9 +81,12 @@ def train(train_loader, val_loader, model, loss_func, optimizer, args, global_ba
             loss.backward()
             optimizer.step()
 
-            val_loss = evaluate(val_loader, model, loss_func, args)
-            train_loss = evaluate(train_loader, model, loss_func, args)
-            print(f"Batch {idx}, train loss: {np.round(train_loss, 4)}, val loss: {np.round(val_loss, 4)}")
+            val_loss, val_acc, val_acc_by_category = evaluate(val_loader, model, loss_func, args)
+            train_loss, train_acc, train_acc_by_category = evaluate(train_loader, model, loss_func, args)
+            print(f"Batch {idx}")
+            print(f"train loss: {np.round(train_loss, 4)}, val loss: {np.round(val_loss, 4)}")
+            print(f"train acc: {np.round(train_acc, 4)}, val acc: {np.round(val_acc, 4)}")
+            print(f"train acc by category: {np.round(train_acc_by_category, 4)}, val acc by category: {np.round(val_acc_by_category, 4)}")
 
             global_batch_cnt += 1
             global_batch.append(global_batch_cnt)
@@ -89,7 +94,7 @@ def train(train_loader, val_loader, model, loss_func, optimizer, args, global_ba
             global_val_loss.append(val_loss)
 
         train_loss = np.mean(losses)
-        val_loss = evaluate(val_loader, model, loss_func, args)
+        val_loss, val_acc, val_acc_by_category = evaluate(val_loader, model, loss_func, args)
 
         # Save model
         if epoch >= 1 and val_loss < best_val_loss and args.save:
@@ -104,8 +109,15 @@ def evaluate(val_loader, model, loss_func, args):
 
     losses = []
 
-    for idx, (rep, label) in enumerate(val_loader):
+    accuracy = []
 
+    accuracy_by_catagory = [[] for _ in range(args.output_size)]
+
+    labels = []
+
+    for idx, (rep, label) in enumerate(val_loader):
+        
+        labels.append(float(label.detach().cpu().numpy()[0]))
         rep = rep.to(torch.float32)
         rep = rep.to(args.device)
         label = label.to(args.device)
@@ -115,15 +127,28 @@ def evaluate(val_loader, model, loss_func, args):
             loss = loss_func(pred_label, label)
             losses.append(loss.item())
 
-    return np.mean(losses)
+        for p, l in zip(pred_label, label):
+            acc = (torch.argmax(p) == l).float().squeeze()
+            acc = acc.detach().cpu().numpy()
+            accuracy.append(acc)
+
+            accuracy_by_catagory[l].append(acc)
+
+    accuracy_by_catagory = np.array([np.mean(cat) for cat in accuracy_by_catagory])
+    labels = Counter(labels)
+
+    print(labels)
+
+    return np.mean(losses), np.mean(accuracy), accuracy_by_catagory
 
 
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--input_size", type=int, default=3584)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--input_size", type=int, default=6656)
+    # parser.add_argument("--input_size", type=int, default=3584)
     parser.add_argument("--hidden_size", type=int, default=1024)
     parser.add_argument("--output_size", type=int, default=7)
     parser.add_argument("--max_epochs", type=int, default=3)
@@ -144,7 +169,7 @@ def main():
 
     # Load data
     train_data, val_data, train_loader, val_loader = load_data(args)
-
+    
     # Load model
     model = load_MLP_model(args)
 
